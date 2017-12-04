@@ -1,0 +1,67 @@
+---
+title: "Models"
+author: "Anthony Rentsch"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    collapsed: false
+    smooth_scroll: false
+    df_print: kable
+---
+
+```{r setup, include=FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Dependencies
+library(tidyverse)
+
+# Data
+orders <- read.csv("/Users/anthonyrentsch/Desktop/UMass/Senior Year/First Semester/Advanced Data Analysis/orders.csv")
+products_prior <- read.csv("/Users/anthonyrentsch/Desktop/UMass/Senior Year/First Semester/Advanced Data Analysis/order_products__prior.csv")
+order_products_train <- read.csv("order_products__train.csv")
+products <- read.csv("products.csv")
+aisles <- read.csv("aisles.csv")
+departments <- read.csv("departments.csv")
+```
+
+# Setup
+
+```{r}
+#Here, we join the orders by time with the products ordered for prior and train set orders
+prior <- products_prior %>% left_join(orders, by = "order_id")
+train <- order_products_train %>% left_join(orders, by = "order_id")
+#Joining the prior and training sets together
+orders_full <- rbind(train, prior)
+```
+
+
+# Predict that an individual will order the item they have ordered most
+
+First, look at what the maximum number of times a user has ordered the same product.
+
+```{r}
+orders_full %>% group_by(user_id) %>% count(product_id) %>% summarise(max_orders = max(n)) %>% 
+  ggplot() +
+  geom_histogram(aes(x = max_orders)) +
+  labs(x = "Maximum number of times a user has ordered the same product",
+       title = "Number of users")
+```
+
+Now use predict the next product that a user will order is product that each user has ordered most.
+
+```{r}
+max_ordered_product <- orders_full %>% group_by(user_id) %>% 
+  count(product_id) 
+max_ordered_product <- max_ordered_product %>% filter(n == max(n))
+
+# predict; when a user has multiple products tied for most ordered, break at random
+test <- orders %>% filter(eval_set == "test") %>% left_join(max_ordered_product, by = "user_id") 
+test <- test %>% group_by(user_id) %>% sample_n(1) %>% ungroup()
+  
+test <- test %>% select(order_id, product_id) %>% rename(products = product_id)
+write_csv(test, "max_previously_ordered.csv")
+```
+
+Kaggle F1 score: 0.1632167. 
+
