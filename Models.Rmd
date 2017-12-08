@@ -43,9 +43,10 @@ First, look at what the maximum number of times a user has ordered the same prod
 ```{r}
 orders_full %>% group_by(user_id) %>% count(product_id) %>% summarise(max_orders = max(n)) %>% 
   ggplot() +
-  geom_histogram(aes(x = max_orders)) +
+  geom_histogram(aes(x = max_orders), fill = "green4") +
   labs(x = "Maximum number of times a user has ordered the same product",
-       title = "Number of users")
+       title = "")
+#ggsave("max_reorders.png")
 ```
 
 Now use predict the next product that a user will order is product that each user has ordered most.

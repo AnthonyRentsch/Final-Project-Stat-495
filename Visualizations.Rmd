@@ -111,3 +111,11 @@ ggplot(data=most_reordered, aes(x=reorder(product_name, -count), y=count, fill =
   ggtitle("Fifty Most ReOrdered Products") + guides(fill=guide_legend(title = "Department"))+ scale_fill_brewer(palette="YlGn")
 ```
 
+```{r}
+orders_full %>% group_by(user_id) %>% summarise(m = n_distinct(order_id)) %>% 
+  ggplot() +
+  geom_histogram(aes(x = m), fill = "green4") +
+  labs(x = "Number of orders per user")
+#ggsave("num_orders_per_user.png")
+```
+

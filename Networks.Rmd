@@ -1,0 +1,119 @@
+---
+title: "Networks"
+author: "Anthony Rentsch"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    collapsed: false
+    smooth_scroll: false
+    df_print: kable
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Dependencies
+library(tidyverse)
+library(network)
+library(sna)
+library(igraph)
+library(GGally)
+library(tictoc)
+
+# Data
+orders <- read.csv("/Users/anthonyrentsch/Desktop/UMass/Senior Year/First Semester/Advanced Data Analysis/orders.csv")
+order_products_prior <- read.csv("/Users/anthonyrentsch/Desktop/UMass/Senior Year/First Semester/Advanced Data Analysis/order_products__prior.csv")
+order_products_train <- read.csv("order_products__train.csv")
+products <- read.csv("products.csv")
+aisles <- read.csv("aisles.csv")
+departments <- read.csv("departments.csv")
+```
+
+# Setup
+
+```{r}
+#Here, we join the orders by time with the products ordered for prior and train set orders
+prior <- order_products_prior %>% left_join(orders, by = "order_id")
+train <- order_products_train %>% left_join(orders, by = "order_id")
+#Joining the prior and training sets together
+orders_full <- rbind(train, prior)
+```
+
+# Construct Network
+
+Each product is a node. Each connection runs between products that are in the same order. 
+
+```{r}
+# create network matrix
+products_matrix <- orders_full %>% 
+  group_by(order_id) %>% 
+  select(order_id, product_id) %>% 
+  mutate(new = product_id[1]) %>% 
+  ungroup() %>% 
+  select(-order_id)
+
+# randomize order of matrix and take only a subset of products to build network that we can visualize
+products_matrix_small <- products_matrix[sample(nrow(products_matrix), nrow(products_matrix)), ]
+products_matrix_small <- products_matrix_small %>% 
+  filter(product_id %in% sample(levels(as.factor(product_id)),2)) %>% 
+  inner_join(products, by = "product_id") %>% 
+  rename(product1 = product_name, department = department_id) %>% 
+  select(product1, new, department) %>% 
+  rename(product_id = new) %>% 
+  inner_join(products, by = "product_id") %>% 
+  rename(product2 = product_name) %>% 
+  select(product1, product2
+         #, department
+         )
+# ggnet
+# create network object for small subset
+products_network_small <- network(products_matrix_small, directed = F)
+# create full network
+#products_network <- network(products_matrix, directed = F)
+
+# igraph - took less than a minute to run
+network_igraph_small <- graph_from_data_frame(products_matrix_small, directed=FALSE)
+tic()
+network_igraph <- graph_from_data_frame(products_matrix, directed=FALSE)
+toc()
+```
+
+# Visualize small network
+
+ggnet2
+
+```{r}
+# ggnet2
+products_network_small %v% "department" <- c(products_matrix_small$product1[1], products_matrix_small$product1[2])
+ggnet2(products_network_small,
+       #color = "department",
+       #label = TRUE,
+       edge.color = "grey")
+```
+
+igraph 
+
+```{r}
+plot(network_igraph_small, vertex.label = NA)
+```
+
+# Summary stats
+
+igraph - full network
+
+```{r}
+# this calculates the adjacent verticies for a given vertex - here, bananas
+adjacent_vertices(network_igraph, v = 24852) %>% 
+  unlist() %>% 
+  as_tibble() %>% 
+  count(value) %>% 
+  rename(product_id = value, num_connections = n) %>% 
+  arrange(desc(num_connections)) %>% 
+  left_join(products, by = "product_id") %>%
+  select(product_id, product_name, num_connections)
+```
+
+
+
+
