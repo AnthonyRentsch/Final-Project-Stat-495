@@ -66,3 +66,53 @@ write_csv(test, "max_previously_ordered.csv")
 
 Kaggle F1 score: 0.1632167. 
 
+
+Now retry but guessing top 2 items.
+
+```{r}
+# set up data frame to use to predict 2 or more products
+max_ordered_product2 <- orders_full %>% group_by(user_id) %>% 
+  count(product_id) %>% top_n(2, wt = n)
+max_ordered_product2 <- max_ordered_product2 %>% select(-n)
+max_ordered_product_2_ormore <- max_ordered_product2 %>% mutate(row = row_number()) %>% 
+  spread(row, product_id)
+
+test2 <- orders %>% filter(eval_set == "test") %>% left_join(max_ordered_product_2_ormore, by = "user_id")
+test2 <- test2 %>% select(order_id, '1', '2')
+  
+test2 <- within(test2, x <- paste(test2$`1`,test2$`2`,sep=' ')) %>% rename(order_id = order_id, products = x) %>% 
+  select(order_id, products)
+write_csv(test2, "max_previously_ordered_2.csv")
+```
+
+Top 3 items.
+
+```{r}
+test3 <- orders %>% filter(eval_set == "test") %>% left_join(max_ordered_product_2_ormore, by = "user_id")
+test3 <- test3 %>% select(order_id, '1', '2', '3')
+test3$`3`[is.na(test3$`3`)] <- ""
+  
+test3 <- within(test3, x <- paste(test3$`1`,test3$`2`,test3$`3`,sep=' ')) %>% 
+  rename(order_id = order_id, products = x) %>% 
+  select(order_id, products)
+
+
+write_csv(test3, "max_previously_ordered_3.csv")
+```
+
+Top 4 items.
+
+```{r}
+test4 <- orders %>% filter(eval_set == "test") %>% left_join(max_ordered_product_2_ormore, by = "user_id")
+test4 <- test4 %>% select(order_id, '1', '2', '3','4')
+test4$`3`[is.na(test4$`3`)] <- ""
+test4$`3`[is.na(test4$`4`)] <- ""
+  
+test4 <- within(test4, x <- paste(test4$`1`,test4$`2`,test4$`3`,test4$`4`,sep=' ')) %>% 
+  rename(order_id = order_id, products = x) %>% 
+  select(order_id, products)
+
+
+write_csv(test4, "max_previously_ordered_4.csv")
+
+```
